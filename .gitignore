@@ -1,0 +1,88 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore VS Code settings
+.vscode/
+.vscode-server/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Ignore Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Ignore Gitpod configuration
+.gitpod/
+.gitpod.yml
+
+# Ignore Dev Container files
+.devcontainer/
+*.devcontainer.json
+
+# Ignore environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Ignore AWS local credentials and config (NEVER commit AWS secrets)
+.aws/
+*.pem
+*.key
+
+# Ignore Docker artifacts
+docker-compose.override.yml
+docker-compose.local.yml
+*.dockerfile.tmp
+
+# Ignore build artifacts
+build/
+dist/
+out/
+
+# Ignore logs
+*.log
+logs/
+debug.log
+
+# Ignore temporary files
+tmp/
+temp/
+*.tmp
+
+# Ignore coverage reports
+coverage/
+.coverage
+pytest_cache/
+
+# Ignore compiled frontend files
+frontend/node_modules/
+frontend/.next/
+frontend/build/
+frontend/dist/
+
+# Ignore compiled backend files
+backend/__pycache__/
+backend/.pytest_cache/
+
+# Ignore macOS Finder metadata
+.AppleDouble
+.LSOverride
+
+# Ignore backup files
+*.bak
+*.swp
+*.swo
+
+# Ignore lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
