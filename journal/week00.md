@@ -10,7 +10,7 @@ configuring the AWS CLI, and documenting proof of each step.
 ### Role Access to Billing
 I verified that IAM User access to billing is enabled so I can view budgets and cost reports.
 
-![Billing Access](assets\week0-role-access-to-billing-information.png)
+![Billing Access](assets/week0-role-access-to-billing-information.png)
 
 ### Monthly Cost Budget
 Created a monthly cost budget with email alerting configured.
