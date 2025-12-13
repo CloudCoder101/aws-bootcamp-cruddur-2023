@@ -12,7 +12,6 @@ export AWS_REGION="us-east-1"
 ```
 
 ### Install Dependencies
-
 Add to `requirements.txt`:
 ```
 aws-xray-sdk
@@ -70,19 +69,12 @@ aws xray create-sampling-rule \
 ## 2. Honeycomb — OpenTelemetry Tracing
 
 ### Add Dependencies
-
-Add to `requirements.txt`:
 ```
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-exporter-otlp-proto-http
 opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-requests
-```
-
-Install:
-```bash
-pip install -r requirements.txt
 ```
 
 ### Add Tracing to `app.py`
@@ -98,18 +90,9 @@ provider = TracerProvider()
 processor = BatchSpanProcessor(OTLPSpanExporter())
 provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
-tracer = trace.get_tracer(__name__)
 
-app = Flask(__name__)
 FlaskInstrumentor().instrument_app(app)
 RequestsInstrumentor().instrument()
-```
-
-### Add Env Vars (docker-compose)
-```yaml
-OTEL_EXPORTER_OTLP_ENDPOINT: "https://api.honeycomb.io"
-OTEL_EXPORTER_OTLP_HEADERS: "x-honeycomb-team=${HONEYCOMB_API_KEY}"
-OTEL_SERVICE_NAME: "${HONEYCOMB_SERVICE_NAME}"
 ```
 
 ---
@@ -117,15 +100,8 @@ OTEL_SERVICE_NAME: "${HONEYCOMB_SERVICE_NAME}"
 ## 3. CloudWatch Logs
 
 ### Add Dependency
-
-Add to `requirements.txt`:
 ```
 watchtower
-```
-
-Install:
-```bash
-pip install -r requirements.txt
 ```
 
 ### Add Logging to `app.py`
@@ -136,141 +112,62 @@ from time import strftime
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-cw_handler = watchtower.CloudWatchLogHandler(log_group='cruddur')
-LOGGER.addHandler(console_handler)
-LOGGER.addHandler(cw_handler)
-```
-
-### Add Automatic Request Logging
-```python
-@app.after_request
-def after_request(response):
-    timestamp = strftime('[%Y-%b-%d %H:%M]')
-    LOGGER.error(
-        '%s %s %s %s %s %s',
-        timestamp,
-        request.remote_addr,
-        request.method,
-        request.scheme,
-        request.full_path,
-        response.status
-    )
-    return response
+LOGGER.addHandler(logging.StreamHandler())
+LOGGER.addHandler(watchtower.CloudWatchLogHandler(log_group='cruddur'))
 ```
 
 ---
+
 ## 4. Rollbar — Backend Error Tracking
 
-Integrated **Rollbar** to capture and monitor backend exceptions in the Flask application.
-
 ### Add Dependencies
-
-Added to `requirements.txt`:
-
+```
 blinker
 rollbar
+```
 
-
-Installed dependencies:
-```bash
-pip install -r requirements.txt
-
-Add Environment Variable (docker-compose)
-
-ROLLBAR_ACCESS_TOKEN: "${ROLLBAR_ACCESS_TOKEN}"
-
-Initialize Rollbar in app.py
-
+### Initialize Rollbar
+```python
 import rollbar
 import rollbar.contrib.flask
 from flask import got_request_exception
 
-rollbar_access_token = os.getenv("ROLLBAR_ACCESS_TOKEN")
+rollbar.init(
+    access_token=os.getenv("ROLLBAR_ACCESS_TOKEN"),
+    environment="development",
+    root=os.path.dirname(os.path.realpath(__file__))
+)
 
-if rollbar_access_token:
-    rollbar.init(
-        access_token=rollbar_access_token,
-        environment="development",
-        root=os.path.dirname(os.path.realpath(__file__)),
-    )
-    got_request_exception.connect(
-        rollbar.contrib.flask.report_exception,
-        app
-    )
+got_request_exception.connect(
+    rollbar.contrib.flask.report_exception,
+    app
+)
+```
 
-Test Endpoint
-
-Created a test route that intentionally raises an exception:
-
+### Test Endpoint
+```python
 @app.route("/rollbar/test")
 def rollbar_test():
     raise Exception("Rollbar backend test: intentional exception")
-
-Verification
-
-Triggered the endpoint using curl
-
-Confirmed the exception appeared in the Rollbar dashboard
-
-Verified full Python/Flask stack trace and environment metadata
-
-Evidence (stored in journal/assets/week02/)
-
-Week02-08-Rollbar-Backend-Exception-List.png
-
-Week02-09-Rollbar-Backend-Exception-Details.png
-
-
----
-
-## STEP 3 — TWO SMALL FIXES
-
-### A) Fix Required Screenshots table (Rollbar row)
-
-Change this row:
-
-```markdown
-| Rollbar | "Hello World!" test event appears |
-
-
-
-
-
-
-
----
-
-## Required Screenshots
-
-| Section | Required Proof |
-|---------|----------------|
-| X-Ray | X-Ray console showing service graph traces |
-| Honeycomb | Dataset showing spans arriving |
-| CloudWatch | Log group "cruddur" visible + logs inside |
-| Rollbar | "Hello World!" test event appears |
-
-### Screenshot Format Example:
-```markdown
-![X-Ray Service Graph](assets/week02-xray.png)
-![Honeycomb Dataset](assets/week02-honeycomb.png)
-![CloudWatch Logs](assets/week02-cloudwatch.png)
-![Rollbar Test Event](assets/week02-rollbar.png)
 ```
 
 ---
 
-## Week 2 Summary
+## Proof Screenshots (Week 02)
 
-This week I implemented:
-
-* **AWS X-Ray** distributed tracing
-* **Honeycomb** tracing through OpenTelemetry
-* **CloudWatch** structured logging
-* **Rollbar** error reporting
-
-These tools help diagnose errors, trace user requests, and monitor performance in a distributed system.
+![Docker Containers](assets/week02/week02-01-Docker-ps.png)
+![X-Ray Service Map](assets/week02/week02-02-xray-service-map.png)
+![CloudWatch Logs](assets/week02/week02-03a-cloudwatch.logs.png)
+![CloudWatch Log Streams](assets/week02/week02-03b-cloudwatch-logs.png)
+![CloudWatch X-Ray Traces](assets/week02/week02-04-cloudwatch-xray-traces.png)
+![CloudWatch Log Entries](assets/week02/week02-05-cloudwatch-log-entries.png)
+![Honeycomb Traces](assets/week02/week02-06-honeycomb-traces-working.png)
+![Honeycomb Trace Detail](assets/week02/week02-07-honeycomb-trace-detail.png)
+![Rollbar Exception](assets/week02/week02-08-rollbar-backend-exception.png)
+![Rollbar Exception Detail](assets/week02/week02-09-rollbar-backend-exception-detail.png)
 
 ---
 
-## ✅ Week 2 Distributed Tracing: Complete# Week 2 — Distributed Tracing
+## ✅ Week 2 Distributed Tracing: Complete
+
+
