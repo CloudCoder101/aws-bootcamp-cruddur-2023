@@ -1,10 +1,13 @@
 import './ConfirmationPage.css';
 import React from "react";
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+
 import {ReactComponent as Logo} from '../components/svg/logo.svg';
 
 // [TODO] Authenication
-import Cookies from 'js-cookie'
+import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
+
+
 
 export default function ConfirmationPage() {
   const [email, setEmail] = React.useState('');
@@ -26,26 +29,26 @@ export default function ConfirmationPage() {
     // [TODO] Authenication
   }
 
+  const navigate = useNavigate();
+  const { email: emailParam } = useParams();
+
   const onsubmit = async (event) => {
     event.preventDefault();
-    console.log('ConfirmationPage.onsubmit')
-    // [TODO] Authenication
-    if (Cookies.get('user.email') === undefined || Cookies.get('user.email') === '' || Cookies.get('user.email') === null){
-      setErrors("You need to provide an email in order to send Resend Activiation Code")   
-    } else {
-      if (Cookies.get('user.email') === email){
-        if (Cookies.get('user.confirmation_code') === code){
-          Cookies.set('user.logged_in',true)
-          window.location.href = "/"
-        } else {
-          setErrors("Code is not valid")
-        }
-      } else {
-        setErrors("Email is invalid or cannot be found.")   
-      }
-    }
-    return false
+  setErrors('');
+
+  try {
+    await confirmSignUp({
+      username: email,
+      confirmationCode: code
+    });
+
+    console.log('User confirmed');
+    navigate('/signin');
+  } catch (err) {
+    console.error(err);
+    setErrors(err.message || 'Confirmation failed');
   }
+};
 
   let el_errors;
   if (errors){
@@ -61,10 +64,10 @@ export default function ConfirmationPage() {
   }
 
   React.useEffect(()=>{
-    if (params.email) {
-      setEmail(params.email)
-    }
-  }, [])
+    if (emailParam) {
+    setEmail(emailParam);
+  }
+}, [emailParam]);
 
   return (
     <article className="confirm-article">

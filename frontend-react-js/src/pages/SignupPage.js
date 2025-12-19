@@ -3,12 +3,18 @@ import React from "react";
 import {ReactComponent as Logo} from '../components/svg/logo.svg';
 import { Link } from "react-router-dom";
 
-// [TODO] Authenication
-import Cookies from 'js-cookie'
+// [TODO] Authenication  -DONE
+
+import { signUp } from 'aws-amplify/auth';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function SignupPage() {
 
-  // Username is Eamil
+  const navigate = useNavigate();
+
+
+  // Username is Email
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [username, setUsername] = React.useState('');
@@ -16,17 +22,31 @@ export default function SignupPage() {
   const [errors, setErrors] = React.useState('');
 
   const onsubmit = async (event) => {
-    event.preventDefault();
-    console.log('SignupPage.onsubmit')
-    // [TODO] Authenication
-    Cookies.set('user.name', name)
-    Cookies.set('user.username', username)
-    Cookies.set('user.email', email)
-    Cookies.set('user.password', password)
-    Cookies.set('user.confirmation_code',1234)
-    window.location.href = `/confirm?email=${email}`
-    return false
+  event.preventDefault();
+  setErrors('');
+  console.log('SignupPage.onsubmit');
+
+  try {
+    const { isSignUpComplete, userId, nextStep } = await signUp({
+      username: email,
+      password,
+      options: {
+        userAttributes: {
+          email,
+          name
+        }
+      }
+    });
+
+    console.log('signUp result', { isSignUpComplete, userId, nextStep });
+    navigate(`/confirm/${encodeURIComponent(email)}`);
+  } catch (err) {
+    console.error('signUp error', err);
+    setErrors(err?.message || 'Sign up failed');
   }
+};
+
+
 
   const name_onchange = (event) => {
     setName(event.target.value);

@@ -1,4 +1,5 @@
 import './App.css';
+import { Amplify } from 'aws-amplify';
 
 import HomeFeedPage from './pages/HomeFeedPage';
 import UserFeedPage from './pages/UserFeedPage';
@@ -9,11 +10,21 @@ import MessageGroupsPage from './pages/MessageGroupsPage';
 import MessageGroupPage from './pages/MessageGroupPage';
 import ConfirmationPage from './pages/ConfirmationPage';
 import React from 'react';
-import process from 'process';
+
 import {
   createBrowserRouter,
   RouterProvider
 } from "react-router-dom";
+
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      region: process.env.REACT_APP_AWS_REGION,
+      userPoolId: process.env.REACT_APP_COGNITO_USER_POOL_ID,
+      userPoolClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,    
+    }
+  }
+});
 
 const router = createBrowserRouter([
   {
@@ -40,10 +51,12 @@ const router = createBrowserRouter([
     path: "/signin",
     element: <SigninPage />
   },
+
   {
-    path: "/confirm",
-    element: <ConfirmationPage />
+    path: "/confirm/:email", 
+    element: <ConfirmationPage /> 
   },
+
   {
     path: "/forgot",
     element: <RecoverPage />
