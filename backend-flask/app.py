@@ -1,6 +1,7 @@
 from flask import Flask
 from flask import request
 from flask_cors import CORS, cross_origin
+from services.show_activity import ShowActivity
 import os
 
 import watchtower
@@ -27,14 +28,16 @@ from flask import got_request_exception
 # ----------------------------
 # AWS X-Ray imports
 # ----------------------------
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+#from aws_xray_sdk.core import xray_recorder
+#from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
 # ----------------------------
 # Local service imports
 # ----------------------------
 from services.home_activities import *
-from services.user_activities import *
+from services.db import get_conn
+#from aws_xray_sdk.core import xray_recorder
+#from aws_xray_sdk.ext.flask.middleware import XRayMiddlewarefrom services.user_activities import *
 from services.create_activity import *
 from services.create_reply import *
 from services.search_activities import *
@@ -82,9 +85,9 @@ if rollbar_access_token:
 # ============================================================
 # AWS X-Ray Setup
 # ============================================================
-xray_url = os.getenv("AWS_XRAY_URL")
-xray_recorder.configure(service='Cruddur', dynamic_naming=xray_url)
-XRayMiddleware(app, xray_recorder)
+#xray_url = os.getenv("AWS_XRAY_URL")
+#xray_recorder.configure(service='Cruddur', dynamic_naming=xray_url)
+#XRayMiddleware(app, xray_recorder)
 
 # ============================================================
 # CloudWatch Logging Setup
@@ -164,10 +167,46 @@ def data_create_message():
         return model['data'], 200
 
 
-@app.route("/api/activities/home", methods=['GET'])
+
+@app.route("/api/activities/home", methods=["GET"])
 def data_home():
-    data = HomeActivities.run()
-    return data, 200
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                  a.uuid::text,
+                  a.handle,
+                  a.message,
+                  a.created_at,
+                  a.expires_at,
+                  a.likes_count,
+                  a.reposts_count,
+                  (
+                    SELECT count(*)
+                    FROM replies r
+                    WHERE r.reply_to_activity_uuid = a.uuid
+                  ) AS replies_count
+                FROM activities a
+                ORDER BY a.created_at DESC
+                LIMIT 20;
+              """)
+            activities = cur.fetchall()
+            for a in activities:
+                cur.execute("""
+                    SELECT
+                    uuid::text,
+                    reply_to_activity_uuid::text,
+                    handle,
+                    message,
+                    created_at,
+                    likes_count,
+                    reposts_count
+                    FROM replies
+                    WHERE reply_to_activity_uuid = %s::uuid
+                    ORDER BY created_at ASC;
+                """, (a["uuid"],))
+                a["replies"] = cur.fetchall()
+    return activities, 200
 
 
 @app.route("/api/activities/@<string:handle>", methods=['GET'])
@@ -194,12 +233,13 @@ def data_search():
 def data_activities():
     user_handle = 'andrewbrown'
     message = request.json['message']
-    ttl = request.json['ttl']
+    ttl = request.json.get('ttl', '7-days')
     model = CreateActivity.run(message, user_handle, ttl)
     if model['errors'] is not None:
         return model['errors'], 422
     else:
         return model['data'], 200
+
 
 
 @app.route("/api/activities/<string:activity_uuid>", methods=['GET'])

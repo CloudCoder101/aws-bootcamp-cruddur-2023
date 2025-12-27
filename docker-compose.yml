@@ -11,6 +11,8 @@ services:
       AWS_XRAY_DAEMON_ADDRESS: "xray-daemon:2000"
       FRONTEND_URL: "https://3001-${CODESPACE_NAME}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
       BACKEND_URL: "https://4567-${CODESPACE_NAME}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+      CONNECTION_URL: "postgresql://postgres:password@db:5432/cruddur"
+
 
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
@@ -36,6 +38,7 @@ services:
       - "3001:3000"
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_BACKEND_URL=https://4567-crispy-carnival-w54vwx9w7v4h9w47.app.github.dev
   
   xray-daemon:
     image: "amazon/aws-xray-daemon"
@@ -47,6 +50,23 @@ services:
       - "xray -o -b xray-daemon:2000"
     ports:
       - "2000:2000/udp"
+
+    
+  db:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cruddur
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+
 
 
 
