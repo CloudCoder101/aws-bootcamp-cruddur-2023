@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+
+import boto3
+import os
+import sys
+from datetime import datetime, timezone, timedelta
+import uuid
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+parent_path = os.path.abspath(os.path.join(current_path, '..', '..', 'backend-flask'))
+sys.path.append(parent_path)
+from lib.db import db
+
+ddb = boto3.client('dynamodb', endpoint_url='http://localhost:8000')
+
+def get_user_uuids():
+    sql = """
+      SELECT uuid, display_name, handle
+      FROM users
+      WHERE handle IN (%s, %s)
+    """
+    users = db.query_array_json(sql, ['andrewbrown', 'bayko'])
+    
+    my_user = next((u for u in users if u['handle'] == 'andrewbrown'), None)
+    other_user = next((u for u in users if u['handle'] == 'bayko'), None)
+    
+    return {'my_user': my_user, 'other_user': other_user}
+
+def create_message_group(client, message_group_uuid, my_user_uuid, other_user_uuid, 
+                         other_user_display_name, other_user_handle, last_message_at):
+    table_name = 'cruddur-messages'
+    response = client.put_item(
+        TableName=table_name,
+        Item={
+            'pk': {'S': f"GRP#{my_user_uuid}"},
+            'sk': {'S': last_message_at},
+            'message_group_uuid': {'S': message_group_uuid},
+            'user_uuid': {'S': other_user_uuid},
+            'user_display_name': {'S': other_user_display_name},
+            'user_handle': {'S': other_user_handle}
+        }
+    )
+    return response
+
+def create_message(client, message_group_uuid, created_at, message,
+                   my_user_uuid, my_user_display_name, my_user_handle):
+    message_uuid = str(uuid.uuid4())
+    table_name = 'cruddur-messages'
+    
+    response = client.put_item(
+        TableName=table_name,
+        Item={
+            'pk': {'S': f"MSG#{message_group_uuid}"},
+            'sk': {'S': created_at},
+            'message_uuid': {'S': message_uuid},
+            'message': {'S': message},
+            'user_uuid': {'S': my_user_uuid},
+            'user_display_name': {'S': my_user_display_name},
+            'user_handle': {'S': my_user_handle}
+        }
+    )
+    return response
+
+users = get_user_uuids()
+message_group_uuid = str(uuid.uuid4())
+now = datetime.now(timezone.utc)
+
+create_message_group(
+    client=ddb,
+    message_group_uuid=message_group_uuid,
+    my_user_uuid=users['my_user']['uuid'],
+    other_user_uuid=users['other_user']['uuid'],
+    other_user_display_name=users['other_user']['display_name'],
+    other_user_handle=users['other_user']['handle'],
+    last_message_at=now.isoformat()
+)
+
+create_message_group(
+    client=ddb,
+    message_group_uuid=message_group_uuid,
+    my_user_uuid=users['other_user']['uuid'],
+    other_user_uuid=users['my_user']['uuid'],
+    other_user_display_name=users['my_user']['display_name'],
+    other_user_handle=users['my_user']['handle'],
+    last_message_at=now.isoformat()
+)
+
+conversation = """
+Person1: Hello there!
+Person2: Hi! How are you?
+Person1: Great to chat with you!
+Person2: Likewise! How's the bootcamp going?
+Person1: Really well, learning a lot about DynamoDB!
+"""
+
+lines = conversation.strip().split('\n')
+
+for i, line in enumerate(lines):
+    if line.startswith('Person1:'):
+        user = users['my_user']
+        message = line.replace('Person1: ', '').strip()
+    elif line.startswith('Person2:'):
+        user = users['other_user']
+        message = line.replace('Person2: ', '').strip()
+    else:
+        raise Exception(f"Unknown speaker: {line}")
+    
+    created_at = (now + timedelta(minutes=i)).isoformat()
+    
+    create_message(
+        client=ddb,
+        message_group_uuid=message_group_uuid,
+        created_at=created_at,
+        message=message,
+        my_user_uuid=user['uuid'],
+        my_user_display_name=user['display_name'],
+        my_user_handle=user['handle']
+    )
+    
+    print(f"Created: {message}")
+
+print("Seed complete!")

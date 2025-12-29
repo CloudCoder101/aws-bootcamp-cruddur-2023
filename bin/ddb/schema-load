@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import boto3
+
+ddb = boto3.client('dynamodb', endpoint_url='http://localhost:8000')
+
+response = ddb.create_table(
+    TableName='cruddur-messages',
+    AttributeDefinitions=[
+        {'AttributeName': 'pk', 'AttributeType': 'S'},
+        {'AttributeName': 'sk', 'AttributeType': 'S'}
+    ],
+    KeySchema=[
+        {'AttributeName': 'pk', 'KeyType': 'HASH'},
+        {'AttributeName': 'sk', 'KeyType': 'RANGE'}
+    ],
+    BillingMode='PROVISIONED',
+    ProvisionedThroughput={
+        'ReadCapacityUnits': 5,
+        'WriteCapacityUnits': 5
+    }
+)
+
+print(response)

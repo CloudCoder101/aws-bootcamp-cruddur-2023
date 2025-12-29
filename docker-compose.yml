@@ -7,51 +7,21 @@ services:
     ports:
       - "4567:4567"
     environment:
-      AWS_XRAY_URL: "*4567-${CODESPACE_NAME}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}*"
-      AWS_XRAY_DAEMON_ADDRESS: "xray-daemon:2000"
-      FRONTEND_URL: "https://3001-${CODESPACE_NAME}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
-      BACKEND_URL: "https://4567-${CODESPACE_NAME}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
       CONNECTION_URL: "postgresql://postgres:password@db:5432/cruddur"
-
-
-      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
-      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
       AWS_REGION: "us-east-1"
-      AWS_DEFAULT_REGION: "us-east-1"
-
-      # 🔹 Honeycomb / OTEL
-      HONEYCOMB_API_KEY: "${HONEYCOMB_API_KEY}"
-      HONEYCOMB_DATASET: "cruddur"
-      HONEYCOMB_SERVICE_NAME: "${HONEYCOMB_SERVICE_NAME}"
-
-      OTEL_EXPORTER_OTLP_ENDPOINT: "https://api.honeycomb.io/v1/traces"
-      OTEL_EXPORTER_OTLP_HEADERS: "x-honeycomb-team=${HONEYCOMB_API_KEY},x-honeycomb-dataset=${HONEYCOMB_DATASET}"
-      OTEL_SERVICE_NAME: "${HONEYCOMB_SERVICE_NAME}"
-
-      # 🔹 Rollbar
-      ROLLBAR_ACCESS_TOKEN: "${ROLLBAR_ACCESS_TOKEN}"
 
   frontend:
     build:
       context: ./frontend-react-js
     ports:
       - "3001:3000"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_BACKEND_URL=https://4567-crispy-carnival-w54vwx9w7v4h9w47.app.github.dev
-  
+
   xray-daemon:
-    image: "amazon/aws-xray-daemon"
-    environment:
-      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
-      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
-      AWS_REGION: "us-east-1"
-    command:
-      - "xray -o -b xray-daemon:2000"
+    image: amazon/aws-xray-daemon
+    command: ["xray", "-o", "-b", "xray-daemon:2000"]
     ports:
       - "2000:2000/udp"
 
-    
   db:
     image: postgres:14-alpine
     restart: unless-stopped
@@ -64,9 +34,24 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
+  dynamodb-local:
+    container_name: aws-bootcamp-cruddur-2023-dynamodb-local
+    image: amazon/dynamodb-local:latest
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    working_dir: /home/dynamodblocal
+    ports:
+      - "8000:8000"
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: aws-bootcamp-cruddur-2023-dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+    depends_on:
+      - dynamodb-local
+
 volumes:
   db-data:
-
-
-
-
+  
