@@ -114,8 +114,9 @@ except Exception as e:
 # ============================================================
 # CORS Setup
 # ============================================================
-frontend = os.getenv('FRONTEND_URL')
-backend = os.getenv('BACKEND_URL')
+
+frontend = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+backend = os.getenv('BACKEND_URL', 'http://localhost:4567')
 origins = [frontend, backend]
 cors = CORS(
     app,
@@ -128,6 +129,10 @@ cors = CORS(
 # ============================================================
 # Routes
 # ============================================================
+
+@app.route("/api/health-check")
+def health_check():
+    return {"success": True}, 200
 
 @app.route("/rollbar/test")
 def rollbar_test():
