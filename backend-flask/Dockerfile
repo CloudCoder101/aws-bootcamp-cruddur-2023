@@ -1,6 +1,9 @@
-FROM python:3.10-slim-buster
+FROM python:3.10-slim-bullseye
 
 WORKDIR /backend-flask
+
+# Install system dependencies including psql client
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 # Install backend dependencies
 COPY requirements.txt requirements.txt

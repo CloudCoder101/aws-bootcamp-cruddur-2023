@@ -180,32 +180,30 @@ def data_home():
             cur.execute("""
                 SELECT
                   a.uuid::text,
-                  a.handle,
+                  u.handle,
                   a.message,
                   a.created_at,
                   a.expires_at,
                   a.likes_count,
-                  a.reposts_count,
                   (
                     SELECT count(*)
                     FROM replies r
                     WHERE r.reply_to_activity_uuid = a.uuid
                   ) AS replies_count
                 FROM activities a
+                LEFT JOIN public.users u ON u.uuid = a.user_uuid
                 ORDER BY a.created_at DESC
                 LIMIT 20;
-              """)
+            """)
             activities = cur.fetchall()
             for a in activities:
                 cur.execute("""
                     SELECT
-                    uuid::text,
-                    reply_to_activity_uuid::text,
-                    handle,
-                    message,
-                    created_at,
-                    likes_count,
-                    reposts_count
+                        uuid::text,
+                        reply_to_activity_uuid::text,
+                        message,
+                        created_at,
+                        likes_count
                     FROM replies
                     WHERE reply_to_activity_uuid = %s::uuid
                     ORDER BY created_at ASC;
